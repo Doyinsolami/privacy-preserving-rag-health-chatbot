@@ -19,8 +19,10 @@ def store_document(doc_id, text, metadata=None):
     )
 
 
-def search(query_text, n_results=2):
+def search(query_text, n_results=2, patient_id=None):
+    where = {"patient_id": patient_id} if patient_id else None
     return collection.query(
         query_embeddings=[embed_text(query_text)],
         n_results=n_results,
+        where=where,
     )
