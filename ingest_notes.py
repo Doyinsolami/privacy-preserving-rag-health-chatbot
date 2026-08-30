@@ -41,7 +41,6 @@ def main():
         collection.upsert(
             ids=batch_ids,
             embeddings=embeddings,
-            documents=batch_texts,
             metadatas=batch_metadatas,
         )
         print(f"Embedded {start + len(batch_ids)} / {len(ids)}")
