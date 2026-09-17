@@ -3,8 +3,10 @@ from pathlib import Path
 
 import pandas as pd
 
-PATIENTS_CSV = Path("data/synthea_csv/patients.csv")
-GROUND_TRUTH_PATH = Path("data/ground_truth.json")
+PROJECT_ROOT = Path(__file__).resolve().parent
+DATA_DIR = PROJECT_ROOT / "data"
+PATIENTS_CSV = DATA_DIR / "synthea_csv" / "patients.csv"
+GROUND_TRUTH_PATH = DATA_DIR / "ground_truth.json"
 
 
 def load_encounter_counts():

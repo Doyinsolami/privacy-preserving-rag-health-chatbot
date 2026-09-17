@@ -2,9 +2,13 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-NOTES_DIR = Path("data/notes")
+PROJECT_ROOT = Path(__file__).resolve().parent
+DATA_DIR = PROJECT_ROOT / "data"
+NOTES_DIR = DATA_DIR / "notes"
+CHROMA_DIR = PROJECT_ROOT / "chroma_db"
+
 model = SentenceTransformer("all-MiniLM-L6-v2")
-chroma_client = chromadb.PersistentClient(path="./chroma_db")
+chroma_client = chromadb.PersistentClient(path=str(CHROMA_DIR))
 collection = chroma_client.get_or_create_collection(
     name="encounter_embeddings"
 )

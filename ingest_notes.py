@@ -3,8 +3,10 @@ from pathlib import Path
 
 from ingest import model, collection
 
-NOTES_DIR = Path("data/notes")
-GROUND_TRUTH_PATH = Path("data/ground_truth.json")
+PROJECT_ROOT = Path(__file__).resolve().parent
+DATA_DIR = PROJECT_ROOT / "data"
+NOTES_DIR = DATA_DIR / "notes"
+GROUND_TRUTH_PATH = DATA_DIR / "ground_truth.json"
 BATCH_SIZE = 256
 
 
