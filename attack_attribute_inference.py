@@ -1,22 +1,10 @@
-"""Attack 1: attribute inference from stolen embeddings.
+import argparse
 
-Given only the embedding vectors in the Chroma store (no plaintext notes),
-how much of each victim's chart can an attacker recover? For each candidate
-PHI term (conditions, medications, procedures, allergies pulled from the
-corpus vocabulary) we train a logistic regression classifier on the
-attacker's train-split (embedding -> term present/absent) pairs, then apply
-it to the test-split embeddings for patients the attacker was never
-supposed to see (see create_geia_splits.py for the patient-level split).
-
-This requires no access to a generative model and runs in seconds -- it's
-the cheap baseline every embedding store is exposed to once its vectors
-leak, and the metric to beat with any defense (e.g. differential privacy
-noise on the embeddings).
-"""
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
 
+from ingest import get_collection
 from attack_common import build_vocab, fetch_embeddings, label_matrix, load_ground_truth, load_split
 from results import save_result
 
@@ -26,7 +14,28 @@ MAX_DF_RATIO = 0.6
 TOP_N_GUESSES = 5
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--collection", default=None)
+    parser.add_argument("--tag", default=None)
+    parser.add_argument("--adaptive", action="store_true")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    if args.collection:
+        target_collection = get_collection(args.collection)
+        tag = args.tag if args.tag else args.collection
+        run_id = f"attribute_{tag}"
+        dp_applied = True
+    else:
+        target_collection = None
+        run_id = "attack_attribute_inference"
+        dp_applied = False
+
+    shadow_collection = target_collection if args.adaptive else None
+
     ground_truth = load_ground_truth()
     shadow_ids = load_split("train")
     target_ids = load_split("test")
@@ -37,9 +46,9 @@ def main():
     print(f"Attacker vocabulary: {len(vocab)} candidate PHI terms "
           f"(built from {len(shadow_ids)} shadow notes)")
 
-    x_shadow = fetch_embeddings(shadow_ids)
+    x_shadow = fetch_embeddings(shadow_ids, use_collection=shadow_collection)
     y_shadow = label_matrix(ground_truth, shadow_ids, vocab)
-    x_target = fetch_embeddings(target_ids)
+    x_target = fetch_embeddings(target_ids, use_collection=target_collection)
     y_target = label_matrix(ground_truth, target_ids, vocab)
 
     keep = y_shadow.sum(axis=0) > 0
@@ -93,11 +102,14 @@ def main():
               f"attacker's top-{TOP_N_GUESSES} guesses: {mean_hit_at_n:.3f}")
 
     save_result(
-        run_id="attack_attribute_inference",
+        run_id=run_id,
         config={
             "attack": "attribute_inference",
             "threat_model": "white_box_stolen_vector_db",
             "embedding_model": "all-MiniLM-L6-v2",
+            "dp_applied": dp_applied,
+            "collection": args.collection,
+            "attacker_mode": "adaptive" if args.adaptive else "transfer",
             "vocab_size": len(vocab),
             "shadow_encounters": len(shadow_ids),
             "target_encounters": len(target_ids),

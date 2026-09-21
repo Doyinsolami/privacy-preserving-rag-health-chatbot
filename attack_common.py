@@ -29,10 +29,13 @@ def load_split(name):
     return encounter_ids
 
 
-def fetch_embeddings(encounter_ids):
-    from ingest import collection
+def fetch_embeddings(encounter_ids, use_collection=None):
+    if use_collection is not None:
+        source = use_collection
+    else:
+        from ingest import collection as source
 
-    result = collection.get(ids=list(encounter_ids), include=["embeddings"])
+    result = source.get(ids=list(encounter_ids), include=["embeddings"])
     id_to_embedding = dict(zip(result["ids"], result["embeddings"]))
     missing = [eid for eid in encounter_ids if eid not in id_to_embedding]
     if missing:

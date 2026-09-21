@@ -18,9 +18,14 @@ def embed_text(text):
     return model.encode(text).tolist()
 
 
-def search(query_text, n_results=2, patient_id=None):
+def get_collection(name):
+    return chroma_client.get_collection(name)
+
+
+def search(query_text, n_results=2, patient_id=None, use_collection=None):
+    target = use_collection if use_collection is not None else collection
     where = {"patient_id": patient_id} if patient_id else None
-    results = collection.query(
+    results = target.query(
         query_embeddings=[embed_text(query_text)],
         n_results=n_results,
         where=where,

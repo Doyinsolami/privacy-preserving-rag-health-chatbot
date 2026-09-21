@@ -1,0 +1,22 @@
+{
+  "run_id": "baseline_no_dp",
+  "timestamp": "2026-09-20T20:25:48.122473",
+  "config": {
+    "dp_applied": false,
+    "epsilon": null,
+    "mechanism": null
+  },
+  "utility": {
+    "recall_at_1": 0.75,
+    "recall_at_3": 0.875,
+    "recall_at_5": 0.9,
+    "mrr": 0.80625,
+    "answer_accuracy": 0.75,
+    "conditional_generator_accuracy": 0.8108108108108109,
+    "end_to_end_answer_accuracy": 0.75,
+    "answer_accuracy_total_questions": 40,
+    "answer_accuracy_graded_count": 37,
+    "answer_accuracy_skipped_count": 3
+  },
+  "attack": null
+}

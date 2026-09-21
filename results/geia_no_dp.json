@@ -1,0 +1,89 @@
+{
+  "run_id": "attack_generative_inversion",
+  "timestamp": "2026-09-17T16:02:38.578025",
+  "config": {
+    "attack": "generative_inversion_geia_style",
+    "threat_model": "white_box_stolen_vector_db",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "decoder_backbone": "gpt2",
+    "prefix_length": 10,
+    "target_encounters": 1858,
+    "clinical_vocab_size": 626,
+    "clinical_prf_averaging": "micro",
+    "baseline": "mean_of_train_split_embeddings",
+    "shuffled_control": "each_target_paired_with_random_embedding_from_different_test_patient",
+    "shuffled_control_seed": 42,
+    "old_roll_same_patient_pairs": 1838,
+    "embedding_consistency_max_abs_difference": 1.30385160446167e-07,
+    "embedding_consistency_min_cosine": 1.0
+  },
+  "utility": null,
+  "attack": {
+    "real": {
+      "mean_rouge_l_f1": 0.7038805023883062,
+      "mean_token_f1": 0.7087108165581651,
+      "clinical_precision_micro": 0.5053571428571428,
+      "clinical_recall_micro": 0.7212028542303772,
+      "clinical_f1_micro": 0.5942881142377153,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0005382131324004305
+    },
+    "shuffled_control": {
+      "mean_rouge_l_f1": 0.37623437425623935,
+      "mean_token_f1": 0.3861454077154417,
+      "clinical_precision_micro": 0.10867874208245361,
+      "clinical_recall_micro": 0.16615698267074414,
+      "clinical_f1_micro": 0.1314074571716493,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0005382131324004305
+    },
+    "baseline": {
+      "mean_rouge_l_f1": 0.4120430806784687,
+      "mean_token_f1": 0.42033908029147227,
+      "clinical_precision_micro": 0.0034086831718693937,
+      "clinical_recall_micro": 0.0032279986408426777,
+      "clinical_f1_micro": 0.0033158813263525306,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0016146393972012918
+    },
+    "real_above_shuffled": {
+      "mean_rouge_l_f1": 0.3276461281320669,
+      "mean_token_f1": 0.32256540884272344,
+      "clinical_precision_micro": 0.39667840077468924,
+      "clinical_recall_micro": 0.5550458715596331,
+      "clinical_f1_micro": 0.462880657066066,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0
+    },
+    "real_above_baseline": {
+      "mean_rouge_l_f1": 0.29183742170983756,
+      "mean_token_f1": 0.2883717362666929,
+      "clinical_precision_micro": 0.5019484596852735,
+      "clinical_recall_micro": 0.7179748555895346,
+      "clinical_f1_micro": 0.5909722329113628,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": -0.0010764262648008613
+    },
+    "baseline_reconstruction": "Patient: Art115 Zemlak964\nEncounter date: 2025-03-07T05:07:02Z\nEncounter type: Encounter for problem (procedure)\nReason for visit: Chronic congestive heart failure (disorder).\nProcedures performed: Electrocardiographic procedure (procedure).\nMedications prescribed: Simvastatin 10 MG Oral Tablet.",
+    "examples": [
+      {
+        "encounter_id": "03ab9a27-df05-f0de-0c4c-9d30a3c91046",
+        "true_note": "Patient: Man114 Crooks415\nEncounter date: 2023-02-22T09:52:47Z\nEncounter type: Well child visit (procedure)\nAssessment: Gingivitis (disorder).\nProcedures performed: Assessment of anxiety (procedure); Depression screening (procedure); Depression screening using Patient Health Questionnaire Nine Item score (procedure); Patient referral for dental care (procedure).\nVitals: Body Height: 156.6 cm; Body Weight: 62.5 kg; Diastolic Blood Pressure: 86.0 mm[Hg]; Systolic Blood Pressure: 110.0 mm[Hg]; Heart rate: 71.0 /min; Respiratory rate: 13.0 /min.",
+        "reconstructed": "Patient: Krishna674 Watsica258\nEncounter date: 2025-03-27T05:07:02Z\nEncounter type: Well child visit (procedure)\nAssessment: Gingivitis (disorder).\nProcedures performed: Assessment of health and social care needs (procedure); Depression screening (procedure); Assessment of substance use (procedure); Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure); Patient referral for dental care (procedure).\nVitals: Body Height: 174.4 cm; Body Weight: 81.2 kg; Diastolic Blood Pressure: 84.0 mm[Hg]; Systolic Blood Pressure: 122.0 mm[Hg]; Heart rate: 81.0 /min; Respiratory rate: 14.0 /min.",
+        "shuffled_reconstruction": "Patient: Casey401 Brekke496\nEncounter date: 2020-01-27T05:07:02Z\nEncounter type: General examination of patient (procedure)\nAssessment: Medication review due (situation); Stress (finding).\nProcedures performed: Assessment of health and social care needs (procedure); Assessment of anxiety (procedure); Depression screening (procedure); Assessment of substance use (procedure); Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure); Patient referral for dental care (procedure).\nMedications prescribed: Hydrochlorothiazide 25 MG Oral Tablet; lisinopril 10 MG Oral Tablet; amLODIPine 2.5 MG Oral Tablet; amLODIPine 2.5 MG Oral Tablet; 60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry"
+      },
+      {
+        "encounter_id": "03ab9a27-df05-f0de-1ef7-73f779027afa",
+        "true_note": "Patient: Man114 Crooks415\nEncounter date: 2025-10-22T09:52:47Z\nEncounter type: Patient encounter procedure (procedure)\nReason for visit: Contraception care (regime/therapy).\nProcedures performed: Intramuscular injection (procedure).",
+        "reconstructed": "Patient: Rocky100 Spinka232\nEncounter date: 2025-03-07T05:38:58Z\nEncounter type: Patient encounter procedure (procedure)\nReason for visit: Contraception care (regime/therapy).\nProcedures performed: Intramuscular injection (procedure).",
+        "shuffled_reconstruction": "Patient: Florence828 Roob72\nEncounter date: 2019-03-07T05:38:58Z\nEncounter type: Encounter for problem (procedure)\nReason for visit: Chronic kidney disease stage 4 (disorder).\nProcedures performed: Renal dialysis (procedure).\nMedications prescribed: 1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen]."
+      },
+      {
+        "encounter_id": "03ab9a27-df05-f0de-21f6-a03f9b989526",
+        "true_note": "Patient: Man114 Crooks415\nEncounter date: 2025-04-23T09:52:47Z\nEncounter type: Patient encounter procedure (procedure)\nReason for visit: Contraception care (regime/therapy).\nProcedures performed: Intramuscular injection (procedure).",
+        "reconstructed": "Patient: Rocky100 Spinka232\nEncounter date: 2025-01-07T05:38:58Z\nEncounter type: Patient encounter procedure (procedure)\nReason for visit: Contraception care (regime/therapy).\nProcedures performed: Intramuscular injection (procedure).",
+        "shuffled_reconstruction": "Patient: Florence828 Roob72\nEncounter date: 2017-03-07T05:38:58Z\nEncounter type: Follow-up encounter (procedure)\nReason for visit: Chronic congestive heart failure (disorder).\nProcedures performed: Renal dialysis (procedure).\nMedications prescribed: 1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen]."
+      }
+    ]
+  }
+}

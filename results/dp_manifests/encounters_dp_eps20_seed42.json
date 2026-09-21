@@ -1,0 +1,48 @@
+{
+  "source_collection": "encounter_embeddings",
+  "target_collection": "encounters_dp_eps20_seed42",
+  "num_embeddings": 7650,
+  "embedding_dim": 384,
+  "epsilon": 20.0,
+  "delta": 1e-05,
+  "clip_norm": 1.0,
+  "sensitivity": 2.0,
+  "sigma": 0.5800803142013313,
+  "sigma_classical": 0.4844805262605389,
+  "classical_formula_valid": false,
+  "seed": 42,
+  "mechanism": "gaussian",
+  "calibration": "analytic_gaussian_balle_wang_2018",
+  "adjacency": "replace_one",
+  "unit": "encounter",
+  "distance_metric": "l2",
+  "source_embeddings_are_unit_norm": true,
+  "l2_on_unit_vectors_equivalent_to_cosine_ranking": true,
+  "normalized_after_noise": true,
+  "normalization_note": "L2 normalization applied after noise addition as DP-safe post-processing, to keep DP retrieval in the same effective geometry as the clean collection (source embeddings are unit-norm, so L2 ranking there is already equivalent to cosine ranking).",
+  "timestamp": "2026-09-21T14:16:06.435901",
+  "num_clipped": 3774,
+  "norm_stats_before_clipping": {
+    "min": 0.9999998924785696,
+    "mean": 0.999999999288588,
+    "median": 0.9999999995163614,
+    "p95": 1.0000000520492156,
+    "max": 1.00000011959292,
+    "num_exceeding_c": 3774,
+    "pct_exceeding_c": 49.333333333333336
+  },
+  "norm_stats_after_noise_before_normalization": {
+    "min": 9.92910304439503,
+    "mean": 11.402089378160385,
+    "median": 11.404678888240248,
+    "p95": 12.07559226066557,
+    "max": 12.77507057603441
+  },
+  "norm_stats_after_normalization": {
+    "min": 0.9999999999999998,
+    "mean": 1.0,
+    "median": 1.0,
+    "p95": 1.0,
+    "max": 1.0000000000000002
+  }
+}

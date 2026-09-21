@@ -1,5 +1,7 @@
 import argparse
 import json
+import re
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -8,7 +10,7 @@ from rouge_score import rouge_scorer
 from sentence_transformers import SentenceTransformer
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from attack_common import fetch_embeddings, load_ground_truth, load_split, note_terms
+from attack_common import build_vocab, fetch_embeddings, load_ground_truth, load_split, note_terms
 from results import save_result
 from train_attacker import Projection, build_prefix, PREFIX_LENGTH, VICTIM_MODEL
 
@@ -22,6 +24,8 @@ MAX_NEW_TOKENS = 200
 NUM_EXAMPLES_TO_SAVE = 3
 NUM_CONSISTENCY_CHECKS = 5
 SEED = 42
+
+WORD_RE = re.compile(r"[a-z0-9]+")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -119,40 +123,147 @@ def cross_patient_pairing(target_ids, patient_of, seed):
     return pairing
 
 
-def term_recall(true_terms, reconstructed_text):
-    if not true_terms:
+def found_in(term, haystack):
+    return term.split(" (")[0].lower() in haystack
+
+
+def token_f1(true_text, reconstructed_text):
+    true_tokens = WORD_RE.findall(true_text.lower())
+    recon_tokens = WORD_RE.findall(reconstructed_text.lower())
+    if not true_tokens or not recon_tokens:
+        return 0.0
+    overlap = sum((Counter(true_tokens) & Counter(recon_tokens)).values())
+    if overlap == 0:
+        return 0.0
+    precision = overlap / len(recon_tokens)
+    recall = overlap / len(true_tokens)
+    return 2 * precision * recall / (precision + recall)
+
+
+def name_recovered(patient_name, reconstructed_text):
+    if not patient_name or patient_name == "Unknown":
         return None
     haystack = reconstructed_text.lower()
-    recovered = sum(1 for term in true_terms if term.split(" (")[0].lower() in haystack)
-    return recovered / len(true_terms)
-
-
-def score_against_targets(reconstructions, target_ids, ground_truth, scorer):
-    rouge_scores = []
-    term_recalls = []
-    for eid, reconstructed in zip(target_ids, reconstructions):
-        true_text = (NOTES_DIR / f"{eid}.txt").read_text(encoding="utf-8")
-        rouge_scores.append(scorer.score(true_text, reconstructed)["rougeL"].fmeasure)
-        recall = term_recall(note_terms(ground_truth[eid]), reconstructed)
-        if recall is not None:
-            term_recalls.append(recall)
-    mean_rouge = sum(rouge_scores) / len(rouge_scores)
-    mean_term_recall = sum(term_recalls) / len(term_recalls) if term_recalls else None
-    return mean_rouge, mean_term_recall
-
-
-def print_scores(label, rouge, term_recall_value):
-    print(f"{label} -- mean ROUGE-L F1: {rouge:.3f}", end="")
-    if term_recall_value is not None:
-        print(f", mean PHI term recall: {term_recall_value:.3f}")
-    else:
-        print()
-
-
-def difference(a, b):
-    if a is None or b is None:
+    parts = [p for p in WORD_RE.findall(patient_name.lower()) if p]
+    if not parts:
         return None
-    return a - b
+    return all(part in haystack for part in parts)
+
+
+def date_recovered(encounter_date, reconstructed_text):
+    if not encounter_date:
+        return None
+    date_part = encounter_date.split("T")[0]
+    return date_part in reconstructed_text
+
+
+def mean_or_none(values):
+    return sum(values) / len(values) if values else None
+
+
+def score_against_targets(reconstructions, target_ids, ground_truth, scorer, vocab):
+    rouge_scores = []
+    token_f1s = []
+    name_hits = []
+    date_hits = []
+
+    total_true = 0
+    total_predicted = 0
+    total_recovered_true = 0
+    total_correct_predicted = 0
+
+    for eid, reconstructed in zip(target_ids, reconstructions):
+        entry = ground_truth[eid]
+        true_text = (NOTES_DIR / f"{eid}.txt").read_text(encoding="utf-8")
+
+        rouge_scores.append(scorer.score(true_text, reconstructed)["rougeL"].fmeasure)
+        token_f1s.append(token_f1(true_text, reconstructed))
+
+        haystack = reconstructed.lower()
+        true_terms = set(note_terms(entry))
+        predicted = {v for v in vocab if found_in(v, haystack)}
+        recovered_true = {t for t in true_terms if found_in(t, haystack)}
+        correct_predicted = predicted & true_terms
+
+        total_true += len(true_terms)
+        total_predicted += len(predicted)
+        total_recovered_true += len(recovered_true)
+        total_correct_predicted += len(correct_predicted)
+
+        name_hit = name_recovered(entry.get("patient_name"), reconstructed)
+        if name_hit is not None:
+            name_hits.append(1.0 if name_hit else 0.0)
+
+        date_hit = date_recovered(entry.get("encounter_date"), reconstructed)
+        if date_hit is not None:
+            date_hits.append(1.0 if date_hit else 0.0)
+
+    precision = total_correct_predicted / total_predicted if total_predicted else None
+    recall = total_recovered_true / total_true if total_true else None
+    if precision is None or recall is None:
+        f1 = None
+    elif precision + recall == 0:
+        f1 = 0.0
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
+
+    return {
+        "mean_rouge_l_f1": mean_or_none(rouge_scores),
+        "mean_token_f1": mean_or_none(token_f1s),
+        "clinical_precision_micro": precision,
+        "clinical_recall_micro": recall,
+        "clinical_f1_micro": f1,
+        "name_recovery_rate": mean_or_none(name_hits),
+        "date_recovery_rate": mean_or_none(date_hits),
+    }
+
+
+def deltas(real, other):
+    out = {}
+    for key, value in real.items():
+        baseline_value = other.get(key)
+        if value is None or baseline_value is None:
+            out[key] = None
+        else:
+            out[key] = value - baseline_value
+    return out
+
+
+def print_scores(label, scores):
+    order = [
+        ("ROUGE-L", "mean_rouge_l_f1"),
+        ("token F1", "mean_token_f1"),
+        ("clinical P", "clinical_precision_micro"),
+        ("clinical R", "clinical_recall_micro"),
+        ("clinical F1", "clinical_f1_micro"),
+        ("name", "name_recovery_rate"),
+        ("date", "date_recovery_rate"),
+    ]
+    parts = []
+    for name, key in order:
+        value = scores.get(key)
+        if value is not None:
+            parts.append(f"{name} {value:.3f}")
+    print(f"{label}: " + ", ".join(parts))
+
+
+def collection_dp_config(collection):
+    """Read the DP settings stored on records created by create_dp_embeddings.py."""
+    sample = collection.get(limit=1, include=["metadatas"])
+    metadatas = sample.get("metadatas") or []
+    metadata = metadatas[0] if metadatas else {}
+    return {
+        "dp_applied": bool(metadata.get("dp_applied", False)),
+        "epsilon": metadata.get("dp_epsilon"),
+        "delta": metadata.get("dp_delta"),
+        "clip_norm": metadata.get("dp_clip_norm"),
+        "sensitivity": metadata.get("dp_sensitivity"),
+        "noise_sigma": metadata.get("dp_noise_sigma"),
+        "dp_seed": metadata.get("dp_seed"),
+        "mechanism": metadata.get("dp_mechanism"),
+        "privacy_unit": metadata.get("dp_unit"),
+        "adjacency": metadata.get("dp_adjacency"),
+    }
 
 
 def main():
@@ -163,7 +274,53 @@ def main():
         default=None,
         help="Evaluate only the first N test encounters for a smoke test.",
     )
+    parser.add_argument(
+        "--collection",
+        default=None,
+        help="Chroma collection containing target embeddings. Omit for the clean baseline.",
+    )
+    parser.add_argument(
+        "--tag",
+        default=None,
+        help="Optional result filename tag. Defaults to the collection name.",
+    )
     args = parser.parse_args()
+
+    if args.collection:
+        from ingest import get_collection
+
+        target_collection = get_collection(args.collection)
+        tag = args.tag if args.tag else args.collection
+        run_id = f"geia_{tag}"
+        dp_config = collection_dp_config(target_collection)
+        if not dp_config["dp_applied"]:
+            raise ValueError(
+                f"Collection {args.collection!r} does not contain DP metadata. "
+                "Omit --collection to run the clean baseline."
+            )
+    else:
+        target_collection = None
+        run_id = "attack_generative_inversion"
+        dp_config = {
+            "dp_applied": False,
+            "epsilon": None,
+            "delta": None,
+            "clip_norm": None,
+            "sensitivity": None,
+            "noise_sigma": None,
+            "dp_seed": None,
+            "mechanism": None,
+            "privacy_unit": None,
+            "adjacency": None,
+        }
+
+    selected_name = args.collection or "encounter_embeddings"
+    selected_count = target_collection.count() if target_collection is not None else None
+    if selected_count is None:
+        from ingest import collection as clean_collection
+
+        selected_count = clean_collection.count()
+    print(f"Selected Chroma collection: {selected_name} ({selected_count} records)")
 
     ground_truth = load_ground_truth()
     target_ids = load_split("test")
@@ -173,19 +330,37 @@ def main():
         target_ids = target_ids[:args.limit]
     train_ids = load_split("train")
 
+    vocab = build_vocab(
+        ground_truth,
+        list(ground_truth.keys()),
+        min_df=1,
+        max_df_ratio=1.0,
+        top_k=None,
+    )
+    print(f"Clinical detection vocabulary for precision: {len(vocab)} terms "
+          f"(every clinical term in the corpus)")
+
     test_records = load_split_records("test")
     patient_of = {eid: test_records[eid]["patient_id"] for eid in target_ids}
 
     print(f"Loading GEIA attacker from {MODEL_DIR}")
     tokenizer, attacker, projection = load_decoder()
 
-    embeddings = fetch_embeddings(target_ids)
-    train_embeddings = fetch_embeddings(train_ids)
+    embeddings = fetch_embeddings(target_ids, use_collection=target_collection)
+    train_embeddings = fetch_embeddings(train_ids, use_collection=target_collection)
     baseline_embedding = train_embeddings.mean(axis=0)
 
-    max_embedding_difference, min_embedding_cosine = embedding_consistency_check(
-        target_ids, embeddings, test_records
-    )
+    if dp_config["dp_applied"]:
+        max_embedding_difference = None
+        min_embedding_cosine = None
+        print(
+            "DP collection selected: skipping the clean-embedding consistency check "
+            "because the stored vectors are intentionally noised."
+        )
+    else:
+        max_embedding_difference, min_embedding_cosine = embedding_consistency_check(
+            target_ids, embeddings, test_records
+        )
 
     n = len(target_ids)
     rolled = np.roll(np.arange(n), 1)
@@ -210,8 +385,8 @@ def main():
         reconstruct(embeddings[i], tokenizer, attacker, projection)
         for i in range(n)
     ]
-    mean_rouge, mean_term_recall = score_against_targets(
-        reconstructions, target_ids, ground_truth, scorer
+    real_scores = score_against_targets(
+        reconstructions, target_ids, ground_truth, scorer, vocab
     )
 
     print("Reconstructing the shuffled-embedding control: every target is paired "
@@ -220,30 +395,28 @@ def main():
         reconstruct(shuffled_embeddings[i], tokenizer, attacker, projection)
         for i in range(n)
     ]
-    shuffled_rouge, shuffled_term_recall = score_against_targets(
-        shuffled_reconstructions, target_ids, ground_truth, scorer
+    shuffled_scores = score_against_targets(
+        shuffled_reconstructions, target_ids, ground_truth, scorer, vocab
     )
 
     print("Reconstructing the control condition: one decoding from the mean "
           "of the attacker's own train-split embeddings, carrying no "
           "information about which target patient is being attacked...")
     baseline_reconstruction = reconstruct(baseline_embedding, tokenizer, attacker, projection)
-    baseline_rouge, baseline_term_recall = score_against_targets(
-        [baseline_reconstruction] * n, target_ids, ground_truth, scorer
+    baseline_scores = score_against_targets(
+        [baseline_reconstruction] * n, target_ids, ground_truth, scorer, vocab
     )
 
+    real_above_shuffled = deltas(real_scores, shuffled_scores)
+    real_above_baseline = deltas(real_scores, baseline_scores)
+
     print()
-    print_scores("Real attack", mean_rouge, mean_term_recall)
-    print_scores("Shuffled control (different patient)", shuffled_rouge, shuffled_term_recall)
-    print_scores("Baseline (no per-target info)", baseline_rouge, baseline_term_recall)
-    print(f"ROUGE-L above shuffled: {mean_rouge - shuffled_rouge:+.3f}")
-    print(f"ROUGE-L above baseline: {mean_rouge - baseline_rouge:+.3f}")
-    recall_above_shuffled = difference(mean_term_recall, shuffled_term_recall)
-    recall_above_baseline = difference(mean_term_recall, baseline_term_recall)
-    if recall_above_shuffled is not None:
-        print(f"PHI term recall above shuffled: {recall_above_shuffled:+.3f}")
-    if recall_above_baseline is not None:
-        print(f"PHI term recall above baseline: {recall_above_baseline:+.3f}")
+    print_scores("Real attack", real_scores)
+    print_scores("Shuffled control (different patient)", shuffled_scores)
+    print_scores("Baseline (no per-target info)", baseline_scores)
+    print()
+    print_scores("Real above shuffled", real_above_shuffled)
+    print_scores("Real above baseline", real_above_baseline)
 
     examples = [
         {
@@ -265,14 +438,19 @@ def main():
           f"{baseline_reconstruction}\n")
 
     save_result(
-        run_id="attack_generative_inversion",
+        run_id=run_id,
         config={
             "attack": "generative_inversion_geia_style",
             "threat_model": "white_box_stolen_vector_db",
+            "collection": selected_name,
+            **dp_config,
+            "attacker_mode": "transfer_clean_trained",
             "embedding_model": VICTIM_MODEL,
             "decoder_backbone": "gpt2",
             "prefix_length": PREFIX_LENGTH,
             "target_encounters": n,
+            "clinical_vocab_size": len(vocab),
+            "clinical_prf_averaging": "micro",
             "baseline": "mean_of_train_split_embeddings",
             "shuffled_control": "each_target_paired_with_random_embedding_from_different_test_patient",
             "shuffled_control_seed": SEED,
@@ -281,16 +459,11 @@ def main():
             "embedding_consistency_min_cosine": min_embedding_cosine,
         },
         attack={
-            "mean_rouge_l_f1": mean_rouge,
-            "mean_phi_term_recall": mean_term_recall,
-            "shuffled_mean_rouge_l_f1": shuffled_rouge,
-            "shuffled_mean_phi_term_recall": shuffled_term_recall,
-            "rouge_l_above_shuffled": mean_rouge - shuffled_rouge,
-            "phi_term_recall_above_shuffled": recall_above_shuffled,
-            "baseline_mean_rouge_l_f1": baseline_rouge,
-            "baseline_mean_phi_term_recall": baseline_term_recall,
-            "rouge_l_above_baseline": mean_rouge - baseline_rouge,
-            "phi_term_recall_above_baseline": recall_above_baseline,
+            "real": real_scores,
+            "shuffled_control": shuffled_scores,
+            "baseline": baseline_scores,
+            "real_above_shuffled": real_above_shuffled,
+            "real_above_baseline": real_above_baseline,
             "baseline_reconstruction": baseline_reconstruction,
             "examples": examples,
         },

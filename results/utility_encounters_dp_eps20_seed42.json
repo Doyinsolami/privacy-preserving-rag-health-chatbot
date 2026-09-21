@@ -1,0 +1,16 @@
+{
+  "run_id": "utility_encounters_dp_eps20_seed42",
+  "timestamp": "2026-09-21T14:16:26.913911",
+  "config": {
+    "dp_applied": true,
+    "collection": "encounters_dp_eps20_seed42"
+  },
+  "utility": {
+    "recall_at_1": 0.1,
+    "recall_at_3": 0.225,
+    "recall_at_5": 0.275,
+    "mrr": 0.16249999999999998,
+    "answer_accuracy": null
+  },
+  "attack": null
+}

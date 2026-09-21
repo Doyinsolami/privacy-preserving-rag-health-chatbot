@@ -1,7 +1,8 @@
+import argparse
 import json
 from pathlib import Path
 
-from ingest import search
+from ingest import collection as clean_collection, get_collection, search
 from results import save_result
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
@@ -11,7 +12,25 @@ K_VALUES = [1, 3, 5]
 RETRIEVE_K = max(K_VALUES)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--collection", default=None)
+    parser.add_argument("--tag", default=None)
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    if args.collection:
+        target_collection = get_collection(args.collection)
+        tag = args.tag if args.tag else args.collection
+        run_id = f"utility_{tag}"
+        dp_applied = True
+    else:
+        target_collection = clean_collection
+        run_id = "baseline_no_dp"
+        dp_applied = False
+
     with open(EVAL_FILE, "r", encoding="utf-8") as f:
         questions = json.load(f)
 
@@ -25,6 +44,7 @@ def main():
             q["question"],
             n_results=RETRIEVE_K,
             patient_id=q["patient_id"],
+            use_collection=target_collection,
         )
         retrieved_ids = results["ids"][0]
         correct = q["correct_encounter_id"]
@@ -55,8 +75,8 @@ def main():
             print(f"  - {q['fact']}")
 
     save_result(
-        run_id="baseline_no_dp",
-        config={"dp_applied": False, "epsilon": None, "mechanism": None},
+        run_id=run_id,
+        config={"dp_applied": dp_applied, "collection": args.collection},
         utility={
             "recall_at_1": hits[1] / total,
             "recall_at_3": hits[3] / total,

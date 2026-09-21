@@ -1,0 +1,21 @@
+{
+  "run_id": "attack_attribute_inference",
+  "timestamp": "2026-09-20T20:50:31.666553",
+  "config": {
+    "attack": "attribute_inference",
+    "threat_model": "white_box_stolen_vector_db",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "vocab_size": 200,
+    "shadow_encounters": 5111,
+    "target_encounters": 1858,
+    "top_n_guesses": 5
+  },
+  "utility": null,
+  "attack": {
+    "precision_micro": 0.6863047105634706,
+    "recall_micro": 0.9697134566557852,
+    "f1_micro": 0.8037579857196543,
+    "mean_auc": 0.9978643897856073,
+    "mean_hit_at_top_n": 0.9024882411213998
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "run_id": "geia_eps1_seed42_smoke200",
+  "timestamp": "2026-09-20T22:28:10.295619",
+  "config": {
+    "attack": "generative_inversion_geia_style",
+    "threat_model": "white_box_stolen_vector_db",
+    "collection": "encounters_dp_eps1_seed42",
+    "dp_applied": true,
+    "epsilon": 1.0,
+    "delta": 1e-05,
+    "clip_norm": 1.0,
+    "sensitivity": 2.0,
+    "noise_sigma": 7.461263269888938,
+    "dp_seed": 42,
+    "mechanism": "gaussian",
+    "privacy_unit": "encounter",
+    "adjacency": "replace_one",
+    "attacker_mode": "transfer_clean_trained",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "decoder_backbone": "gpt2",
+    "prefix_length": 10,
+    "target_encounters": 200,
+    "clinical_vocab_size": 626,
+    "clinical_prf_averaging": "micro",
+    "baseline": "mean_of_train_split_embeddings",
+    "shuffled_control": "each_target_paired_with_random_embedding_from_different_test_patient",
+    "shuffled_control_seed": 42,
+    "old_roll_same_patient_pairs": 192,
+    "embedding_consistency_max_abs_difference": null,
+    "embedding_consistency_min_cosine": null
+  },
+  "utility": null,
+  "attack": {
+    "real": {
+      "mean_rouge_l_f1": 0.2718315526071544,
+      "mean_token_f1": 0.2982960014248274,
+      "clinical_precision_micro": 0.08496732026143791,
+      "clinical_recall_micro": 0.12473347547974413,
+      "clinical_f1_micro": 0.10107991360691145,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0
+    },
+    "shuffled_control": {
+      "mean_rouge_l_f1": 0.27011201531303364,
+      "mean_token_f1": 0.2943800163425796,
+      "clinical_precision_micro": 0.09293394777265745,
+      "clinical_recall_micro": 0.12899786780383796,
+      "clinical_f1_micro": 0.10803571428571429,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0
+    },
+    "baseline": {
+      "mean_rouge_l_f1": 0.28503145500556365,
+      "mean_token_f1": 0.31875406457376787,
+      "clinical_precision_micro": 0.10166666666666667,
+      "clinical_recall_micro": 0.2601279317697228,
+      "clinical_f1_micro": 0.14619532654284,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0
+    },
+    "real_above_shuffled": {
+      "mean_rouge_l_f1": 0.0017195372941207765,
+      "mean_token_f1": 0.003915985082247775,
+      "clinical_precision_micro": -0.007966627511219543,
+      "clinical_recall_micro": -0.004264392324093827,
+      "clinical_f1_micro": -0.006955800678802845,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0
+    },
+    "real_above_baseline": {
+      "mean_rouge_l_f1": -0.013199902398409236,
+      "mean_token_f1": -0.020458063148940497,
+      "clinical_precision_micro": -0.016699346405228757,
+      "clinical_recall_micro": -0.1353944562899787,
+      "clinical_f1_micro": -0.045115412935928564,
+      "name_recovery_rate": 0.0,
+      "date_recovery_rate": 0.0
+    },
+    "baseline_reconstruction": "Patient: Tifany477 Jacobson885\nEncounter date: 2026-04-07T05:38:03Z\nEncounter type: Encounter for check up (procedure)\nReason for visit: Non-small cell carcinoma of lung  TNM stage 1 (disorder).\nAssessment: Non-small cell carcinoma of lung  TNM stage 1 (disorder).\nProcedures performed: Assessment of health and social care needs (procedure); Depression screening (procedure); Assessment of substance use (procedure); Screening for drug abuse (procedure); Patient referral for dental care (procedure).\nMedications prescribed: Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet]; Ibuprofen 400 MG Oral Tablet [Ibu]; lisinopril 10 MG Oral Tablet.",
+    "examples": [
+      {
+        "encounter_id": "03ab9a27-df05-f0de-0c4c-9d30a3c91046",
+        "true_note": "Patient: Man114 Crooks415\nEncounter date: 2023-02-22T09:52:47Z\nEncounter type: Well child visit (procedure)\nAssessment: Gingivitis (disorder).\nProcedures performed: Assessment of anxiety (procedure); Depression screening (procedure); Depression screening using Patient Health Questionnaire Nine Item score (procedure); Patient referral for dental care (procedure).\nVitals: Body Height: 156.6 cm; Body Weight: 62.5 kg; Diastolic Blood Pressure: 86.0 mm[Hg]; Systolic Blood Pressure: 110.0 mm[Hg]; Heart rate: 71.0 /min; Respiratory rate: 13.0 /min.",
+        "reconstructed": "Patient: Art115 Zemlak964\nEncounter date: 2023-01-03T05:07:02Z\nEncounter type: Admission to intensive care unit (procedure)\nReason for visit: Non-small cell carcinoma of lung  TNM stage 1 (disorder).\nAssessment: Non-small cell carcinoma of lung  TNM stage 1 (disorder); Non-small cell carcinoma of lung  TNM stage 2 (disorder); Non-small cell carcinoma of lung  TNM stage 3 (disorder); Non-small cell carcinoma of lung  TNM stage 4 (disorder); Non-small cell carcinoma of lung  TNM stage 5 (disorder); Non-small cell carcinoma of lung  TNM stage 6 (disorder); Non-small cell carcinoma of lung  TNM stage 7 (disorder); Non-small cell carcinoma of lung  TNM",
+        "shuffled_reconstruction": "Patient: Wilmer32 Swaniawski813\nEncounter date: 2023-01-03T05:07:02Z\nEncounter type: General examination of patient (procedure)\nAssessment: Chronic congestive heart failure (disorder)."
+      },
+      {
+        "encounter_id": "03ab9a27-df05-f0de-1ef7-73f779027afa",
+        "true_note": "Patient: Man114 Crooks415\nEncounter date: 2025-10-22T09:52:47Z\nEncounter type: Patient encounter procedure (procedure)\nReason for visit: Contraception care (regime/therapy).\nProcedures performed: Intramuscular injection (procedure).",
+        "reconstructed": "Patient: Florence828 Roob72\nEncounter date: 2026-04-07T05:07:02Z\nEncounter type: Encounter for check up (procedure)\nReason for visit: Acute bacterial sinusitis (disorder).\nAssessment: Acute bacterial sinusitis (disorder).\nMedications prescribed: Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet].",
+        "shuffled_reconstruction": "Patient: Lyle846 Pfeffer420\nEncounter date: 2023-01-03T05:07:02Z\nEncounter type: Encounter for check up (procedure)\nAssessment: Medication review due (situation).\nProcedures performed: Assessment of health and social care needs (procedure); Depression screening (procedure); Assessment of substance use (procedure); Screening for drug abuse (procedure).\nMedications prescribed: Ibuprofen 400 MG Oral Tablet [Ibu].\nVitals: Body Height: 174.4 cm; Body Weight: 81.2 kg; Diastolic Blood Pressure: 83.0 mm[Hg]; Systolic Blood Pressure: 121.0 mm[Hg]; Heart rate: 69.0 /min; Respiratory rate: 14.0 /min."
+      },
+      {
+        "encounter_id": "03ab9a27-df05-f0de-21f6-a03f9b989526",
+        "true_note": "Patient: Man114 Crooks415\nEncounter date: 2025-04-23T09:52:47Z\nEncounter type: Patient encounter procedure (procedure)\nReason for visit: Contraception care (regime/therapy).\nProcedures performed: Intramuscular injection (procedure).",
+        "reconstructed": "Patient: Tifany477 Jacobson885\nEncounter date: 2026-04-07T05:38:58Z\nEncounter type: General examination of patient (procedure)\nAssessment: Medication review due (situation).\nProcedures performed: Assessment of health and social care needs (procedure); Depression screening (procedure); Assessment of substance use (procedure); Screening for drug abuse (procedure); Patient referral for dental care (procedure).",
+        "shuffled_reconstruction": "Patient: Wilmer32 Swaniawski813\nEncounter date: 1971-11-27T05:07:02Z\nEncounter type: Admission to intensive care unit (procedure)\nReason for visit: Chronic congestive heart failure (disorder).\nAssessment: Chronic congestive heart failure (disorder).\nVitals: Diastolic Blood Pressure: 69.0 mm[Hg]; Systolic Blood Pressure: 97.0 mm[Hg]."
+      }
+    ]
+  }
+}

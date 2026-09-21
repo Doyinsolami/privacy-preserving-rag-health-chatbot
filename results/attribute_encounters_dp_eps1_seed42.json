@@ -1,0 +1,24 @@
+{
+  "run_id": "attribute_encounters_dp_eps1_seed42",
+  "timestamp": "2026-09-20T22:18:07.620175",
+  "config": {
+    "attack": "attribute_inference",
+    "threat_model": "white_box_stolen_vector_db",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "dp_applied": true,
+    "collection": "encounters_dp_eps1_seed42",
+    "attacker_mode": "transfer",
+    "vocab_size": 200,
+    "shadow_encounters": 5111,
+    "target_encounters": 1858,
+    "top_n_guesses": 5
+  },
+  "utility": null,
+  "attack": {
+    "precision_micro": 0.0036231884057971015,
+    "recall_micro": 0.00018135654697134566,
+    "f1_micro": 0.0003454231433506045,
+    "mean_auc": 0.5001386684293776,
+    "mean_hit_at_top_n": 0.007848902688566448
+  }
+}

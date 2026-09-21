@@ -160,16 +160,17 @@ def main():
         note_path.write_text(note, encoding="utf-8")
 
         ground_truth[encounter_id] = {
-            "patient_id": patient_id,
-            "encounter_date": encounter["START"],
-            "encounter_type": encounter["DESCRIPTION"],
-            "reason_for_visit": reason if has_reason else None,
-            "conditions": conditions_list,
-            "medications": medications_list,
-            "procedures": procedures_list,
-            "allergies": allergies_list,
-            "observations": observations_list,
-        }
+        "patient_id": patient_id,
+        "patient_name": patient_name,
+        "encounter_date": encounter["START"],
+        "encounter_type": encounter["DESCRIPTION"],
+        "reason_for_visit": reason if has_reason else None,
+        "conditions": conditions_list,
+        "medications": medications_list,
+        "procedures": procedures_list,
+        "allergies": allergies_list,
+        "observations": observations_list,
+}
 
     GROUND_TRUTH_PATH.write_text(
         json.dumps(ground_truth, indent=2), encoding="utf-8"
